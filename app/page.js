@@ -1,95 +1,114 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client"
+import { useState, useEffect } from 'react';
+import { data as products } from '../data/dataset';
+import Filters from './components/Filters.js';
+import ProductTable from './components/ProductTable';
 
-export default function Home() {
+const HomePage = () => {
+  const [filters, setFilters] = useState({
+    public: [],
+    active: [],
+    regions: [],
+    tags: [],
+  });
+
+  const [counts, setCounts] = useState({
+    public: { true: 0, false: 0 },
+    active: { true: 0, false: 0 },
+    regions: { HS: 0, MS: 0, ES: 0 },
+    tags: { math: 0, literature: 0, science: 0 },
+  });
+
+  useEffect(() => {
+    const newCounts = {
+      public: { true: 0, false: 0 },
+      active: { true: 0, false: 0 },
+      regions: { HS: 0, MS: 0, ES: 0 },
+      tags: { math: 0, literature: 0, science: 0 },
+    };
+
+    products.forEach((product) => {
+      newCounts.public[product.public] += 1;
+      newCounts.active[product.active] += 1;
+      product.regions.forEach((region) => {
+        newCounts.regions[region] += 1;
+      });
+      product.tags.forEach((tag) => {
+        newCounts.tags[tag] += 1;
+      });
+    });
+
+    setCounts(newCounts);
+  }, []);
+
+  const handleFilterChange = (filterType, value) => {
+    setFilters((prevFilters) => ({
+      ...prevFilters,
+      [filterType]: prevFilters[filterType].includes(value)
+        ? prevFilters[filterType].filter((item) => item !== value)
+        : [...prevFilters[filterType], value],
+    }));
+  };
+
+  const handleResetFilters = () => {
+    setFilters({
+      public: [],
+      active: [],
+      regions: [],
+      tags: [],
+    });
+  };
+
+  const generateSearchText = () => {
+    const filterEntries = Object.entries(filters)
+      .filter(([, values]) => values.length > 0)
+      .map(
+        ([key, values]) =>
+          `${key}:${values.map((value) => (typeof value === 'boolean' ? value : value)).join(',')}`
+      );
+    return filterEntries.join(' ');
+  };
+
+  const filteredProducts = products.filter((product) => {
+    const publicMatch =
+      filters.public.length === 0 || filters.public.includes(product.public);
+    const activeMatch =
+      filters.active.length === 0 || filters.active.includes(product.active);
+    const regionsMatch =
+      filters.regions.length === 0 ||
+      product.regions.some((region) => filters.regions.includes(region));
+    const tagsMatch =
+      filters.tags.length === 0 ||
+      product.tags.some((tag) => filters.tags.includes(tag));
+
+    return publicMatch && activeMatch && regionsMatch && tagsMatch;
+  });
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>app/page.js</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <div className="container mt-5">
+      <div className="row">
+        <div className="col-md-3">
+          <Filters
+            filters={filters}
+            handleFilterChange={handleFilterChange}
+            handleResetFilters={handleResetFilters}
+            counts={counts}
+          />
+        </div>
+        <div className="col-md-9">
+          <h4>Products</h4>
+          <input
+            type="text"
+            className="form-control mb-3"
+            placeholder="Search..."
+            value={generateSearchText()}
+            readOnly
+          />
+          <ProductTable products={filteredProducts} />
         </div>
       </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+    </div>
   );
-}
+};
+
+export default HomePage;
